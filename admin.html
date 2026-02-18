@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Administración de Dispositivos</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<style>
+/* Botones estilo moderno */
+.nav-btn {
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-weight: 500;
+    color: #333;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+/* Hover elegante */
+.nav-btn:hover {
+    background-color: #0d6efd;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13,110,253,0.3);
+}
+
+/* Botón activo */
+.active-custom {
+    background-color: #092c3b;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(13,110,253,0.3);
+}
+
+/* Botón administración especial */
+.admin-btn {
+    background-color: #092c3b;
+    color: #f7f4f4;
+}
+
+.admin-btn:hover {
+    background-color: #e0a800;
+    color: #000;
+}
+
+</style>
+
+<body class="bg-light">
+
+<!-- PESTAÑAS -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3">
+  <div class="container d-flex justify-content-center">
+
+    <div class="nav nav-pills gap-3">
+
+      <a href="monitoreo.html"
+         class="nav-link nav-btn active-custom">
+         Monitoreo
+      </a>
+
+      <a href="control.html"
+         class="nav-link nav-btn">
+         Control
+      </a>
+
+      <a href="admin.html"
+         class="nav-link nav-btn admin-btn">
+         Administración
+      </a>
+
+    </div>
+
+  </div>
+</nav>
+
+<div class="container mt-4">
+
+<h2 class="mb-4">Administración de Dispositivos</h2>
+
+<!-- FORMULARIO -->
+<div class="card p-4 mb-4">
+    <input type="hidden" id="deviceId">
+
+    <div class="mb-3">
+        <label class="form-label">Nombre del dispositivo</label>
+        <input id="nombre" class="form-control" placeholder="Ej. Puerta Cocina">
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Tipo de dispositivo</label>
+        <select id="tipo" class="form-select">
+            <option value="Puerta">Puerta</option>
+            <option value="Puerta Garaje">Puerta Garaje</option>
+            <option value="Ventilador">Ventilador</option>
+            <option value="Aire Acondicionado">Aire Acondicionado</option>
+            <option value="Lámpara">Lámpara</option>
+            <option value="Sistema">Sistema</option>
+        </select>
+    </div>
+
+    <button onclick="guardar()" class="btn btn-primary w-100" id="btnGuardar">
+        Crear dispositivo
+    </button>
+</div>
+
+<!-- TABLA -->
+<table class="table table-striped">
+<thead>
+<tr>
+    <th>Nombre</th>
+    <th>Tipo</th>
+    <th>Estado</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+<tbody id="tabla"></tbody>
+</table>
+
+</div>
+
+<script>
+const API = "https://698a17f2c04d974bc6a155f8.mockapi.io/api/v1/dispositivos_IoT";
+
+let editando = false;
+
+// Cargar dispositivos
+async function cargar(){
+    const res = await fetch(API);
+    const data = await res.json();
+
+    const tabla = document.getElementById("tabla");
+    tabla.innerHTML = "";
+
+    data.forEach(d=>{
+        tabla.innerHTML += `
+        <tr>
+            <td>${d.nombre}</td>
+            <td>${d.tipo}</td>
+            <td>${d.estado || "OFF"}</td>
+            <td>
+                <button class="btn btn-sm btn-warning me-1" onclick="editar('${d.id}','${d.nombre}','${d.tipo}')">
+                    Editar
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="eliminar('${d.id}')">
+                    Eliminar
+                </button>
+            </td>
+        </tr>`;
+    });
+}
+
+// Crear o actualizar
+async function guardar(){
+
+    const id = document.getElementById("deviceId").value;
+    const nombre = document.getElementById("nombre").value;
+    const tipo = document.getElementById("tipo").value;
+
+    if(nombre.trim() === ""){
+        alert("El nombre es obligatorio");
+        return;
+    }
+
+    const payload = {
+        nombre,
+        tipo,
+        activo: true,
+        estado: "OFF",
+        valor: "-"
+    };
+
+    if(editando){
+        await fetch(`${API}/${id}`,{
+            method:"PUT",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(payload)
+        });
+    } else {
+        await fetch(API,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(payload)
+        });
+    }
+
+    limpiarFormulario();
+    cargar();
+}
+
+// Editar
+function editar(id,nombre,tipo){
+    document.getElementById("deviceId").value = id;
+    document.getElementById("nombre").value = nombre;
+    document.getElementById("tipo").value = tipo;
+
+    document.getElementById("btnGuardar").innerText = "Actualizar dispositivo";
+    editando = true;
+}
+
+// Eliminar
+async function eliminar(id){
+    if(confirm("¿Eliminar este dispositivo?")){
+        await fetch(`${API}/${id}`,{method:"DELETE"});
+        cargar();
+    }
+}
+
+// Limpiar
+function limpiarFormulario(){
+    document.getElementById("deviceId").value = "";
+    document.getElementById("nombre").value = "";
+    document.getElementById("tipo").selectedIndex = 0;
+    document.getElementById("btnGuardar").innerText = "Crear dispositivo";
+    editando = false;
+}
+
+cargar();
+</script>
+
+</body>
+</html>
